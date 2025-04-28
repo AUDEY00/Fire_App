@@ -66,15 +66,15 @@ def LineCountbyMonth(request):
     return JsonResponse(result_with_month_names)
 
 def MultilineIncidentTop3Country(request):
-    query = """
-    SELECT
+    query = '''
+        SELECT
         fl.country,
         strftime('%m', fi.date_time) AS month,
         COUNT(fi.id) AS incident_count
     FROM
         fire_incident fi
     JOIN
-        fire_locations fl ON fl.location_id = fl.id
+        fire_locations fl ON fi.location_id = fl.id
     WHERE
         fl.country IN (
             SELECT
@@ -82,28 +82,28 @@ def MultilineIncidentTop3Country(request):
             FROM
                 fire_incident fi_top
             JOIN
-                fire_locations fl_top ON fl_top.location_id = fi_top.id
+                fire_locations fl_top ON fi_top.location_id = fl_top.id
             WHERE
-                strftime('%Y', fl_top.date_time) = strftime('%Y', 'now')
+                strftime('%Y', fi_top.date_time) = strftime('%Y', 'now')
             GROUP BY
                 fl_top.country
             ORDER BY
                 COUNT(fi_top.id) DESC
             LIMIT 3
         )
-    AND strftime('%Y', fi.date_time) = strftime('%Y', 'now')
+        AND strftime('%Y', fi.date_time) = strftime('%Y', 'now')
     GROUP BY
         fl.country, month
     ORDER BY
-        fl.country, month
-    """
-    
+        fl.country, month;
+    '''
+
     with connection.cursor() as cursor:
         cursor.execute(query)
         rows = cursor.fetchall()
-
     # Initialize a dictionary to store the result
     result = {}
+
     # Initialize a set of months from January to December
     months = set(str(i).zfill(2) for i in range(1, 13))
 
@@ -115,18 +115,17 @@ def MultilineIncidentTop3Country(request):
 
         # If the country is not in the result dictionary, initialize it with all months set to zero
         if country not in result:
-            result[country] = {month: 0 for month in months}
-        
+                result[country] = {month: 0 for month in months}
+
         # Update the incident count for the corresponding month
         result[country][month] = total_incidents
 
     # Ensure there are always 3 countries in the result
     while len(result) < 3:
         # Placeholder name for missing countries
-        missing_country = f'Country ({len(result) + 1})'
+        missing_country = f"Country {len(result) + 1}"
         result[missing_country] = {month: 0 for month in months}
 
-    # Sort months within each country
     for country in result:
         result[country] = dict(sorted(result[country].items()))
 
@@ -135,10 +134,10 @@ def MultilineIncidentTop3Country(request):
     
 def multipleBarbySeverity(request):
     query = """
-    SELECT
-        fi.severity_level,
-        strftime('%m', fi.date_time) AS month,
-        COUNT(fi.id) AS incident_count
+        SELECT
+            fi.severity_level,
+            strftime('%m', fi.date_time) AS month,
+            COUNT(fi.id) AS incident_count
     FROM
         fire_incident fi
     GROUP BY fi.severity_level, month
@@ -164,12 +163,6 @@ def multipleBarbySeverity(request):
         result[level] = dict(sorted(result[level].items()))
 
     return JsonResponse(result)
-
-
-
-
-
-
   
 def map_station(request):
     fireStations = FireStation.objects.values('name', 'latitude', 'longitude')
