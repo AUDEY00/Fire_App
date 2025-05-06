@@ -1,12 +1,15 @@
 from django.shortcuts import render
 from django.views.generic.list import ListView
 from fire.models import Locations, Incident, FireStation
-
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
 from django.db import connection
+from fire.forms import IncidentForm
 from django.http import JsonResponse
 from django.db.models.functions import ExtractMonth
 from django.db.models import Count
 from datetime import datetime
+from django.db.models import Q
 
 
 class HomePageView(ListView):
@@ -197,3 +200,34 @@ def map_incident(request):
         cities.add(incident.location.city)
 
     return render(request, 'map_incident.html', {'incidentData': incident_data, 'cities': list(cities)})
+
+class IncidentList(ListView):
+    model = Incident
+    context_object_name = 'incident'
+    template_name = 'incident_list.html'
+    paginate_by = 5
+
+    def get_queryset(self, *args, **kwargs):
+        qs = super(IncidentList, self).get_queryset(*args, **kwargs)
+        if self.request.GET.get("q") != None:
+            query = self.request.GET.get('q')
+            qs = qs.filter(Q(name__icontains=query) |
+                            Q(description__icontains=query))
+        return qs
+
+class IncidentCreateView(CreateView):
+    model = Incident
+    form_class = IncidentForm
+    template_name = 'incident_add.html'
+    success_url = reverse_lazy('incident-list')
+
+class IncidentUpdateView(UpdateView):
+    model =Incident
+    form_class = IncidentForm
+    template_name = 'incident_edit.html'
+    success_url = reverse_lazy('incident-list')
+
+class IncidentDeleteView(DeleteView):
+    model = Incident
+    template_name = 'incident_delete.html'
+    success_url = reverse_lazy('incident-list')
